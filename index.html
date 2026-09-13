@@ -1,0 +1,70 @@
+<!doctype html>
+<html lang="vi">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
+  <meta name="theme-color" content="#0f6e56" />
+  <title>VKU Field Survey</title>
+  <link rel="stylesheet" href="/src/style.css" />
+</head>
+<body>
+  <header class="topbar">
+    <h1>VKU Field Survey</h1>
+    <span id="net-status" class="badge">...</span>
+  </header>
+
+  <main class="container">
+    <form id="survey-form" class="card">
+      <h2>Phiếu khảo sát cơ sở vật chất</h2>
+
+      <label>Khu vực / Tòa nhà
+        <input type="text" name="building" required placeholder="VD: Tòa A, phòng A203" />
+      </label>
+
+      <label>Loại đối tượng khảo sát
+        <select name="category" required>
+          <option value="">-- chọn --</option>
+          <option value="phong_hoc">Phòng học</option>
+          <option value="thiet_bi">Thiết bị (máy chiếu, điều hòa...)</option>
+          <option value="ha_tang">Hạ tầng (điện, nước, mạng)</option>
+          <option value="khac">Khác</option>
+        </select>
+      </label>
+
+      <label>Tình trạng
+        <select name="condition" required>
+          <option value="">-- chọn --</option>
+          <option value="tot">Tốt</option>
+          <option value="can_sua">Cần sửa chữa</option>
+          <option value="hong">Hỏng / không dùng được</option>
+        </select>
+      </label>
+
+      <label>Ghi chú chi tiết
+        <textarea name="notes" rows="3" placeholder="Mô tả tình trạng cụ thể..."></textarea>
+      </label>
+
+      <label>Chụp ảnh hiện trạng
+        <input type="file" name="photo" accept="image/*" capture="environment" />
+      </label>
+
+      <label>Người khảo sát
+        <input type="text" name="surveyor" required placeholder="Họ tên" />
+      </label>
+
+      <button type="submit" class="btn-primary">Lưu phiếu khảo sát</button>
+      <p class="hint">Phiếu sẽ được lưu ngay trên máy dù không có mạng, và tự động đồng bộ khi có kết nối trở lại.</p>
+    </form>
+
+    <section class="card">
+      <div class="section-head">
+        <h2>Danh sách phiếu đã lưu</h2>
+        <button id="sync-btn" class="btn-secondary">Đồng bộ ngay</button>
+      </div>
+      <ul id="records-list"></ul>
+    </section>
+  </main>
+
+  <script type="module" src="/src/main.js"></script>
+</body>
+</html>
