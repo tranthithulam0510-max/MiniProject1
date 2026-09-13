@@ -27,7 +27,15 @@ body {
   align-items: center;
   gap: 10px;
 }
-.brand-logo { width: 34px; height: auto; border-radius: 6px; background: #fff; padding: 3px; }
+.brand-logo {
+  width: 64px;
+  height: auto;
+  display: block;
+  border-radius: 8px;
+  background: #fff;
+  padding: 6px 8px;
+  object-fit: contain;
+}
 .brand-name { color: #fff; font-weight: 600; font-size: 15px; }
 
 .nav { display: flex; flex-direction: column; gap: 6px; }
