@@ -3,67 +3,100 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
-  <meta name="theme-color" content="#0f6e56" />
+  <meta name="theme-color" content="#3B2E7A" />
   <title>VKU Field Survey</title>
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
-  <header class="topbar">
-    <h1>VKU Field Survey</h1>
-    <span id="net-status" class="badge">...</span>
-  </header>
-
-  <main class="container">
-    <form id="survey-form" class="card">
-      <h2>Phiếu khảo sát cơ sở vật chất</h2>
-
-      <label>Khu vực / Tòa nhà
-        <input type="text" name="building" required placeholder="VD: Tòa A, phòng A203" />
-      </label>
-
-      <label>Loại đối tượng khảo sát
-        <select name="category" required>
-          <option value="">-- chọn --</option>
-          <option value="phong_hoc">Phòng học</option>
-          <option value="thiet_bi">Thiết bị (máy chiếu, điều hòa...)</option>
-          <option value="ha_tang">Hạ tầng (điện, nước, mạng)</option>
-          <option value="khac">Khác</option>
-        </select>
-      </label>
-
-      <label>Tình trạng
-        <select name="condition" required>
-          <option value="">-- chọn --</option>
-          <option value="tot">Tốt</option>
-          <option value="can_sua">Cần sửa chữa</option>
-          <option value="hong">Hỏng / không dùng được</option>
-        </select>
-      </label>
-
-      <label>Ghi chú chi tiết
-        <textarea name="notes" rows="3" placeholder="Mô tả tình trạng cụ thể..."></textarea>
-      </label>
-
-      <label>Chụp ảnh hiện trạng
-        <input type="file" name="photo" accept="image/*" capture="environment" />
-      </label>
-
-      <label>Người khảo sát
-        <input type="text" name="surveyor" required placeholder="Họ tên" />
-      </label>
-
-      <button type="submit" class="btn-primary">Lưu phiếu khảo sát</button>
-      <p class="hint">Phiếu sẽ được lưu ngay trên máy dù không có mạng, và tự động đồng bộ khi có kết nối trở lại.</p>
-    </form>
-
-    <section class="card">
-      <div class="section-head">
-        <h2>Danh sách phiếu đã lưu</h2>
-        <button id="sync-btn" class="btn-secondary">Đồng bộ ngay</button>
+  <div class="app-shell">
+    <aside class="sidebar">
+      <div class="brand">
+        <img src="/icons/vku-logo.svg" alt="VKU" class="brand-logo" />
+        <span class="brand-name">Field Survey</span>
       </div>
-      <ul id="records-list"></ul>
-    </section>
-  </main>
+      <nav class="nav">
+        <a class="nav-item active" href="#">
+          <span class="nav-label">Phiếu khảo sát</span>
+        </a>
+        <a class="nav-item" href="#records-list">
+          <span class="nav-label">Danh sách phiếu</span>
+        </a>
+        <a class="nav-item" href="#" id="sync-nav-btn">
+          <span class="nav-label">Đồng bộ</span>
+        </a>
+      </nav>
+    </aside>
+
+    <main class="main">
+      <header class="main-header">
+        <h1>Phiếu khảo sát cơ sở vật chất</h1>
+        <span id="net-status" class="badge">...</span>
+      </header>
+
+      <section class="stat-row">
+        <div class="stat-card stat-pending">
+          <span class="stat-label">Chờ đồng bộ</span>
+          <span class="stat-value" id="stat-pending">0</span>
+        </div>
+        <div class="stat-card stat-synced">
+          <span class="stat-label">Đã đồng bộ</span>
+          <span class="stat-value" id="stat-synced">0</span>
+        </div>
+        <div class="stat-card stat-broken">
+          <span class="stat-label">Cần sửa chữa</span>
+          <span class="stat-value" id="stat-broken">0</span>
+        </div>
+      </section>
+
+      <form id="survey-form" class="glass-card">
+        <label>Khu vực / Tòa nhà
+          <input type="text" name="building" required placeholder="VD: Tòa A, phòng A203" />
+        </label>
+
+        <label>Loại đối tượng khảo sát
+          <select name="category" required>
+            <option value="">-- chọn --</option>
+            <option value="phong_hoc">Phòng học</option>
+            <option value="thiet_bi">Thiết bị (máy chiếu, điều hòa...)</option>
+            <option value="ha_tang">Hạ tầng (điện, nước, mạng)</option>
+            <option value="khac">Khác</option>
+          </select>
+        </label>
+
+        <label>Tình trạng
+          <select name="condition" required>
+            <option value="">-- chọn --</option>
+            <option value="tot">Tốt</option>
+            <option value="can_sua">Cần sửa chữa</option>
+            <option value="hong">Hỏng / không dùng được</option>
+          </select>
+        </label>
+
+        <label class="full-row">Ghi chú chi tiết
+          <textarea name="notes" rows="3" placeholder="Mô tả tình trạng cụ thể..."></textarea>
+        </label>
+
+        <label>Chụp ảnh hiện trạng
+          <input type="file" name="photo" accept="image/*" capture="environment" />
+        </label>
+
+        <label>Người khảo sát
+          <input type="text" name="surveyor" required placeholder="Họ tên" />
+        </label>
+
+        <button type="submit" class="btn-primary full-row">Lưu phiếu khảo sát</button>
+        <p class="hint full-row">Phiếu sẽ được lưu ngay trên máy dù không có mạng, và tự động đồng bộ khi có kết nối trở lại.</p>
+      </form>
+
+      <section class="glass-card" id="records-section">
+        <div class="section-head">
+          <h2>Danh sách phiếu đã lưu</h2>
+          <button id="sync-btn" class="btn-secondary">Đồng bộ ngay</button>
+        </div>
+        <ul id="records-list"></ul>
+      </section>
+    </main>
+  </div>
 
   <script type="module" src="/src/main.js"></script>
 </body>

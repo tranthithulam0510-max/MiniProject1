@@ -55,6 +55,8 @@ async function renderRecords() {
   const records = await getAllRecords()
   list.innerHTML = ''
 
+  updateStats(records)
+
   if (records.length === 0) {
     list.innerHTML = '<li class="hint">Chưa có phiếu khảo sát nào.</li>'
     return
@@ -71,6 +73,17 @@ async function renderRecords() {
   }
 }
 
+// Cập nhật 3 ô thống kê ở đầu trang
+function updateStats(records) {
+  const pendingEl = document.getElementById('stat-pending')
+  const syncedEl = document.getElementById('stat-synced')
+  const brokenEl = document.getElementById('stat-broken')
+  if (!pendingEl) return
+
+  pendingEl.textContent = records.filter(r => r.status === 'pending').length
+  syncedEl.textContent = records.filter(r => r.status === 'synced').length
+  brokenEl.textContent = records.filter(r => r.condition === 'hong' || r.condition === 'can_sua').length
+}
 // ---------- Đồng bộ dữ liệu lên server khi có mạng ----------
 async function syncPending() {
   if (!navigator.onLine) return
