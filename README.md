@@ -1,101 +1,66 @@
-# VKU Field Survey PWA
+# Điều Tra Hiện Trường — Khảo Sát Bạo Lực Học Đường
 
-Offline-first inspection form dùng để khảo sát cơ sở vật chất trong khuôn viên trường (phòng học, thiết bị, hạ tầng...). App hoạt động **hoàn toàn không cần mạng**: dữ liệu được lưu trực tiếp trên thiết bị và tự động đồng bộ lên server khi có kết nối trở lại.
+App này để đi khảo sát học sinh về bạo lực học đường, dùng ngay trên điện thoại lúc đang phỏng vấn. Cái quan trọng nhất là nó phải chạy được ở trường, chỗ mạng chập chờn hoặc mất hẳn — nên toàn bộ dữ liệu gõ vào được lưu thẳng vào máy trước, có mạng lại thì tự đẩy lên Google Sheet sau.
 
-## Tính năng
+Form có ba phần: nhập thông tin buổi phỏng vấn (ai hỏi, hỏi ai, ở đâu, lúc nào), trả lời 8 câu hỏi cố định về bạo lực học đường, và chụp vài tấm ảnh hiện trường nếu cần. Bấm lưu là xong, không cần chờ mạng. Muốn sửa lại bộ câu hỏi thì vào `src/main.js`, tìm mảng `QUESTIONS` mà sửa trực tiếp.
 
-- Cài đặt được như app thật (Add to Home Screen) nhờ Web App Manifest
-- Mở được và điền form được dù không có mạng, nhờ Service Worker cache toàn bộ app shell
-- Lưu dữ liệu (kể cả ảnh chụp) vào IndexedDB — không mất dữ liệu khi tắt trình duyệt
-- Tự động đồng bộ khi có mạng trở lại (`online` event + Background Sync API nếu trình duyệt hỗ trợ)
-- Sẵn sàng để wrap thành Android APK bằng Capacitor
+Xem lại các phiên đã làm thì vào tab "Lịch sử phiên" — bấm vào một phiên là nó mở ra xem hết câu trả lời với ảnh. Phiên nào chưa gửi lên Sheet được thì có chữ "Chờ đồng bộ", gửi rồi thì đổi thành "Đã đồng bộ".
 
-## Tech stack
-
-| Thành phần | Công nghệ |
-|---|---|
-| Build tool | Vite |
-| PWA (manifest + service worker) | vite-plugin-pwa (Workbox) |
-| Lưu trữ offline | IndexedDB (qua thư viện `idb`) |
-| UI | HTML/CSS/JS thuần (không framework, để dễ wrap Capacitor) |
-
-## Chạy local
+## Chạy thử
 
 ```bash
 npm install
 npm run dev
 ```
 
-Mở `http://localhost:5173`. Service Worker đã được bật ở cả môi trường dev (`devOptions.enabled: true` trong `vite.config.js`) để bạn test offline ngay khi phát triển.
+Xong thì mở link Vite in ra, thường là `http://localhost:5173`.
 
-### Test chế độ offline
+Muốn test cảnh mất mạng: mở trang lên trước (để lúc offline không phải tải lại), rồi vào DevTools qua tab Network tick Offline. Điền form, bấm lưu — phiên vẫn phải lưu được và hiện trong lịch sử, vì phần này chỉ đụng tới IndexedDB chứ không gọi mạng. Lưu ý là code hiện chưa có service worker, nên nếu bạn reload trang lúc đang offline thì trang sẽ không tải lại được — cái offline ở đây là "lưu dữ liệu không cần mạng" chứ chưa phải "mở app không cần mạng". Test xong thì bỏ tick Offline, các phiên đang chờ sẽ tự gửi lên Sheet.
 
-1. Mở DevTools → tab **Application** → **Service Workers** → tick **Offline**
-2. Reload trang — app vẫn phải mở được và form vẫn điền/lưu được
-3. Bỏ tick **Offline** — dữ liệu đã lưu sẽ tự động đồng bộ
+## Nối với Google Sheets
 
-## Build production
+Phần đồng bộ dùng Google Apps Script làm cầu nối, khỏi cần dựng backend riêng. Làm theo file `HUONG_DAN_TICH_HOP.md` để tạo cái Web App đó, deploy xong sẽ có một link dạng `https://script.google.com/macros/s/.../exec`.
+
+Có link rồi thì vào `src/main.js`, sửa dòng này:
+
+```js
+const APPS_SCRIPT_URL = 'https://script.google.com/macros/s/xxx/exec';
+```
+
+Lưu lại, chạy `npm run dev` (hoặc build lại nếu app đã lên production), rồi bấm "Đồng bộ ngay" thử coi có ăn không.
+
+Lưu ý là mỗi lần sửa code bên Apps Script, phải vào Manage deployments tạo version mới, không thì cái link cũ vẫn chạy code cũ, sửa gì cũng không thấy hiệu lực.
+
+## Build để deploy
 
 ```bash
 npm run build
-npm run preview   # xem thử bản build
+npm run preview
 ```
 
-Output nằm trong thư mục `dist/`.
+Kết quả nằm trong `dist/`, kéo lên Cloudflare Pages hay Vercel gì cũng được, build command là `npm run build`, output là `dist`.
 
-## Deploy
+## Dữ liệu lưu ra sao
 
-### Cloudflare Pages
-1. Push code lên GitHub
-2. Vào Cloudflare Pages → **Create a project** → **Connect to Git** → chọn repo
-3. Build command: `npm run build`
-4. Build output directory: `dist`
-5. Deploy — Cloudflare tự cấp HTTPS
-
-### Vercel
-1. Push code lên GitHub
-2. Import repo vào Vercel (framework preset: Vite)
-3. Vercel tự nhận `npm run build` và thư mục `dist`, tự cấp HTTPS
-
-## Kiến trúc offline-first
-
-```
-Form UI → IndexedDB (lưu ngay, status = "pending")
-              ↓
-    có mạng? → NO → giữ trong hàng đợi local
-              → YES → gửi lên server → đánh dấu "synced"
-```
-
-- **Service Worker** (do `vite-plugin-pwa` sinh) cache toàn bộ HTML/CSS/JS ngay từ lần load đầu, nên app mở được kể cả khi mất mạng hoàn toàn ngay từ đầu (không cần đã từng online trước đó).
-- **IndexedDB** là nơi lưu dữ liệu form thật sự — bền vững hơn localStorage, hỗ trợ lưu Blob (ảnh chụp) tốt.
-- Khi trình duyệt bắn event `online`, hoặc khi Background Sync API kích hoạt, app duyệt qua các bản ghi `pending` và gửi lên server.
-
-## Kết nối với backend thật
-
-Hiện tại hàm đồng bộ trong `src/main.js` (`mockSync`) chỉ giả lập thành công sau 300ms để bạn test luồng UI. Khi có backend thật (Firebase, Supabase, Google Sheet Web App, hoặc REST API riêng), thay hàm này bằng:
+Mỗi phiên phỏng vấn là một object như vầy:
 
 ```js
-async function syncRecord(record) {
-  const res = await fetch(API_ENDPOINT, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify(record)
-  })
-  if (!res.ok) throw new Error('Sync failed')
+{
+  id: 's_<timestamp>_<random>',
+  interviewerName: 'Nguyễn Văn A',
+  interviewTime: '2026-09-14T10:30',
+  location: 'Trường THPT A, sân trường',
+  intervieweeName: 'Trần Thị B',
+  intervieweeClass: '11A2',
+  answers: [{ question: '...', answer: '...' }, ...],
+  photos: ['data:image/jpeg;base64,...', ...],
+  synced: false,
+  createdAt: 1234567890
 }
 ```
 
-## Kế hoạch tiếp theo
+Lưu bằng IndexedDB (code trong `src/db.js`) chứ không phải localStorage, vì cần chứa được ảnh và bền hơn khi tắt trình duyệt giữa chừng.
 
-Tuần sau: wrap PWA này thành Android APK bằng **Capacitor**:
+## Sau này
 
-```bash
-npm install @capacitor/core @capacitor/cli
-npx cap init
-npx cap add android
-npm run build
-npx cap copy
-npx cap open android
-```
-
-Vì code không phụ thuộc framework nặng và không dùng API chỉ có trên desktop, `webDir: 'dist'` sẽ hoạt động ngay khi wrap.
+Nếu cần dùng lâu dài ngoài hiện trường mà không tiện mở trình duyệt, có thể đóng gói lại thành app Android bằng Capacitor.
