@@ -7,9 +7,9 @@ export default defineConfig({
       registerType: 'autoUpdate',
       includeAssets: ['icons/icon-192.png', 'icons/icon-512.png'],
       manifest: {
-        name: 'VKU Field Survey',
-        short_name: 'VKU Survey',
-        description: 'Offline-first inspection form for VKU campus facilities',
+        name: 'Điều Tra Hiện Trường VKU',
+        short_name: 'Điều Tra HT',
+        description: 'Ứng dụng phỏng vấn khảo sát bạo lực học đường, hoạt động offline',
         theme_color: '#0f6e56',
         background_color: '#ffffff',
         display: 'standalone',
