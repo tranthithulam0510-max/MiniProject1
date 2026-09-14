@@ -4,7 +4,7 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover" />
   <meta name="theme-color" content="#3B2E7A" />
-  <title>VKU Field Survey</title>
+  <title>Điều Tra Hiện Trường - Bạo Lực Học Đường</title>
   <link rel="stylesheet" href="/src/style.css" />
 </head>
 <body>
@@ -12,24 +12,18 @@
     <aside class="sidebar">
       <div class="brand">
         <img src="/logo.png" alt="VKU" class="brand-logo" />
-        <span class="brand-name">Khảo sát </span>
+        <span class="brand-name">Điều Tra Hiện Trường</span>
       </div>
       <nav class="nav">
-        <a class="nav-item active" href="#">
-          <span class="nav-label">Phiếu khảo sát</span>
-        </a>
-        <a class="nav-item" href="#records-list">
-          <span class="nav-label">Danh sách phiếu</span>
-        </a>
-        <a class="nav-item" href="#" id="sync-nav-btn">
-          <span class="nav-label">Đồng bộ</span>
-        </a>
+        <a class="nav-item active" id="nav-form" href="#">Phiếu phỏng vấn</a>
+        <a class="nav-item" id="nav-history" href="#">Lịch sử phiên</a>
+        <a class="nav-item" id="nav-sync" href="#">Đồng bộ</a>
       </nav>
     </aside>
 
     <main class="main">
       <header class="main-header">
-        <h1>Phiếu khảo sát cơ sở vật chất</h1>
+        <h1>Khảo sát bạo lực học đường</h1>
         <span id="net-status" class="badge">...</span>
       </header>
 
@@ -42,58 +36,63 @@
           <span class="stat-label">Đã đồng bộ</span>
           <span class="stat-value" id="stat-synced">0</span>
         </div>
-        <div class="stat-card stat-broken">
-          <span class="stat-label">Cần sửa chữa</span>
-          <span class="stat-value" id="stat-broken">0</span>
+        <div class="stat-card stat-total">
+          <span class="stat-label">Tổng số phiên</span>
+          <span class="stat-value" id="stat-total">0</span>
         </div>
       </section>
 
-      <form id="survey-form" class="glass-card">
-        <label>Khu vực / Tòa nhà
-          <input type="text" name="building" required placeholder="VD: Tòa A, phòng A203" />
+      <!-- ========== PHIẾU PHỎNG VẤN ========== -->
+      <form id="survey-section" class="glass-card">
+        <h2>Thông tin phiên phỏng vấn</h2>
+
+        <label>Người phỏng vấn
+          <input type="text" name="interviewerName" required placeholder="Họ tên người phỏng vấn" />
         </label>
 
-        <label>Loại đối tượng khảo sát
-          <select name="category" required>
-            <option value="">-- chọn --</option>
-            <option value="phong_hoc">Phòng học</option>
-            <option value="thiet_bi">Thiết bị (máy chiếu, điều hòa...)</option>
-            <option value="ha_tang">Hạ tầng (điện, nước, mạng)</option>
-            <option value="khac">Khác</option>
-          </select>
+        <label>Thời gian
+          <input type="datetime-local" name="interviewTime" id="interview-time" required />
         </label>
 
-        <label>Tình trạng
-          <select name="condition" required>
-            <option value="">-- chọn --</option>
-            <option value="tot">Tốt</option>
-            <option value="can_sua">Cần sửa chữa</option>
-            <option value="hong">Hỏng / không dùng được</option>
-          </select>
+        <label>Địa điểm
+          <input type="text" name="location" required placeholder="VD: Trường THPT A, sân trường" />
         </label>
 
-        <label class="full-row">Ghi chú chi tiết
-          <textarea name="notes" rows="3" placeholder="Mô tả tình trạng cụ thể..."></textarea>
+        <label>Tên người được phỏng vấn
+          <input type="text" name="intervieweeName" required placeholder="Họ tên" />
         </label>
 
-        <label>Chụp ảnh hiện trạng
-          <input type="file" name="photo" accept="image/*" capture="environment" />
+        <label class="full-row">Lớp / Khối
+          <input type="text" name="intervieweeClass" placeholder="VD: 11A2" />
         </label>
 
-        <label>Người khảo sát
-          <input type="text" name="surveyor" required placeholder="Họ tên" />
-        </label>
+        <h2>Nội dung phỏng vấn</h2>
+        <div id="qa-container" class="full-row"></div>
 
-        <button type="submit" class="btn-primary full-row">Lưu phiếu khảo sát</button>
-        <p class="hint full-row">Phiếu sẽ được lưu ngay trên máy dù không có mạng, và tự động đồng bộ khi có kết nối trở lại.</p>
+        <label class="full-row">Ảnh hiện trường
+          <input type="file" id="photo-input" accept="image/*" capture="environment" multiple />
+        </label>
+        <div id="photo-preview" class="photo-preview"></div>
+
+        <button type="submit" class="btn-primary full-row">Lưu phiên phỏng vấn</button>
+        <p class="hint full-row">Phiên sẽ được lưu ngay trên máy dù không có mạng, và tự động đồng bộ khi có kết nối trở lại.</p>
       </form>
 
-      <section class="glass-card" id="records-section">
+      <!-- ========== LỊCH SỬ PHIÊN ========== -->
+      <section class="glass-card" id="history-section" style="display:none">
         <div class="section-head">
-          <h2>Danh sách phiếu đã lưu</h2>
+          <h2>Lịch sử các phiên phỏng vấn</h2>
+        </div>
+        <ul id="history-list"></ul>
+      </section>
+
+      <!-- ========== ĐỒNG BỘ ========== -->
+      <section class="glass-card" id="sync-section" style="display:none">
+        <div class="section-head">
+          <h2>Đồng bộ dữ liệu</h2>
           <button id="sync-btn" class="btn-secondary">Đồng bộ ngay</button>
         </div>
-        <ul id="records-list"></ul>
+        <p class="hint full-row">Nhấn "Đồng bộ ngay" để gửi các phiên chưa đồng bộ lên Google Sheets. Ứng dụng cũng tự động thử đồng bộ khi thiết bị có kết nối mạng trở lại.</p>
       </section>
     </main>
   </div>

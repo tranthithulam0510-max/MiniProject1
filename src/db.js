@@ -1,53 +1,71 @@
-import { openDB } from 'idb'
+// db.js — Lưu trữ offline các phiên phỏng vấn bằng IndexedDB
+const DB_NAME = 'vku_interview_db';
+const DB_VERSION = 1;
+const STORE_NAME = 'sessions';
 
-const DB_NAME = 'vku-survey-db'
-const STORE_NAME = 'records'
+function openDB() {
+  return new Promise((resolve, reject) => {
+    const request = indexedDB.open(DB_NAME, DB_VERSION);
 
-// Mở (hoặc tạo mới) database IndexedDB.
-// Đây là nơi dữ liệu được lưu thật sự trên máy, tồn tại kể cả khi tắt app / mất mạng.
-export async function getDB() {
-  return openDB(DB_NAME, 1, {
-    upgrade(db) {
+    request.onupgradeneeded = (event) => {
+      const db = event.target.result;
       if (!db.objectStoreNames.contains(STORE_NAME)) {
-        const store = db.createObjectStore(STORE_NAME, {
-          keyPath: 'id',
-          autoIncrement: true
-        })
-        store.createIndex('status', 'status')
+        const store = db.createObjectStore(STORE_NAME, { keyPath: 'id' });
+        store.createIndex('synced', 'synced', { unique: false });
+        store.createIndex('createdAt', 'createdAt', { unique: false });
       }
-    }
-  })
+    };
+
+    request.onsuccess = () => resolve(request.result);
+    request.onerror = () => reject(request.error);
+  });
 }
 
-// Thêm một phiếu khảo sát mới, mặc định status = 'pending' (chưa đồng bộ)
-export async function addRecord(record) {
-  const db = await getDB()
-  return db.add(STORE_NAME, {
-    ...record,
-    status: 'pending',
-    createdAt: new Date().toISOString()
-  })
+// Lưu một phiên phỏng vấn mới (mặc định synced = false)
+export async function addSession(session) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    tx.objectStore(STORE_NAME).add(session);
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
 
-// Lấy toàn bộ phiếu đã lưu, mới nhất lên trước
-export async function getAllRecords() {
-  const db = await getDB()
-  const all = await db.getAll(STORE_NAME)
-  return all.reverse()
+// Lấy tất cả phiên, mới nhất lên đầu
+export async function getAllSessions() {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readonly');
+    const request = tx.objectStore(STORE_NAME).getAll();
+    request.onsuccess = () =>
+      resolve(request.result.sort((a, b) => b.createdAt - a.createdAt));
+    request.onerror = () => reject(request.error);
+  });
 }
 
-// Lấy các phiếu đang chờ đồng bộ
-export async function getPendingRecords() {
-  const db = await getDB()
-  return db.getAllFromIndex(STORE_NAME, 'status', 'pending')
+// Lấy các phiên chưa đồng bộ
+export async function getPendingSessions() {
+  const all = await getAllSessions();
+  return all.filter((s) => !s.synced);
 }
 
-// Đánh dấu một phiếu là đã đồng bộ thành công
-export async function markSynced(id) {
-  const db = await getDB()
-  const record = await db.get(STORE_NAME, id)
-  if (!record) return
-  record.status = 'synced'
-  record.syncedAt = new Date().toISOString()
-  await db.put(STORE_NAME, record)
+// Đánh dấu một phiên đã đồng bộ thành công
+export async function markSessionSynced(id) {
+  const db = await openDB();
+  return new Promise((resolve, reject) => {
+    const tx = db.transaction(STORE_NAME, 'readwrite');
+    const store = tx.objectStore(STORE_NAME);
+    const req = store.get(id);
+    req.onsuccess = () => {
+      const record = req.result;
+      if (record) {
+        record.synced = true;
+        record.syncedAt = Date.now();
+        store.put(record);
+      }
+    };
+    tx.oncomplete = () => resolve();
+    tx.onerror = () => reject(tx.error);
+  });
 }
