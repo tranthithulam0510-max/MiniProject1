@@ -387,3 +387,5 @@ document.addEventListener('DOMContentLoaded', async () => {
   updateNetBadge();
   await refreshStats();
 });
+
+
