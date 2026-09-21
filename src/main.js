@@ -5,6 +5,14 @@ import {
   getPendingSessions,
   markSessionSynced,
 } from './db.js';
+import {
+  savePhoto,
+  getPhotoSrc,
+  deletePhoto,
+  getPhotoBase64ForUpload,
+  isNativeApp,
+  capturePhotoNative,
+} from './photoStorage.js';
 
 // ============================================================
 // CẤU HÌNH — thay URL này bằng URL Web App sau khi deploy Apps Script
@@ -24,7 +32,7 @@ export const QUESTIONS = [
   'Bạn đánh giá mức độ nghiêm trọng của vấn đề này tại trường mình như thế nào? (thang điểm 1-5, 5 là rất nghiêm trọng)',
 ];
 
-let currentPhotos = []; // base64 dataURLs của ảnh vừa chụp trong phiên đang nhập
+let currentPhotos = []; // ref ảnh (base64 hoặc native path) của phiên đang nhập
 
 // ------------------------------------------------------------
 // KHỞI TẠO GIAO DIỆN
@@ -65,31 +73,15 @@ function initNav() {
 // ------------------------------------------------------------
 // ẢNH HIỆN TRƯỜNG
 // ------------------------------------------------------------
-function fileToBase64(file) {
-  return new Promise((resolve, reject) => {
-    const reader = new FileReader();
-    reader.onload = () => resolve(reader.result);
-    reader.onerror = reject;
-    reader.readAsDataURL(file);
-  });
-}
-
 function initPhotoInput() {
   const input = document.getElementById('photo-input');
   const preview = document.getElementById('photo-preview');
 
-  input.addEventListener('change', async (e) => {
-    const files = Array.from(e.target.files || []);
-    for (const file of files) {
-      const base64 = await fileToBase64(file);
-      currentPhotos.push(base64);
-    }
-    renderPhotoPreview();
-    input.value = '';
-  });
+  async function renderPhotoPreview() {
+    // Lấy trước URL hiển thị của từng ảnh (bất kể lưu kiểu nào)
+    const srcs = await Promise.all(currentPhotos.map(getPhotoSrc));
 
-  function renderPhotoPreview() {
-    preview.innerHTML = currentPhotos
+    preview.innerHTML = srcs
       .map(
         (src, i) => `
         <div class="photo-thumb">
@@ -100,12 +92,42 @@ function initPhotoInput() {
       .join('');
 
     preview.querySelectorAll('.photo-remove').forEach((btn) => {
-      btn.addEventListener('click', () => {
-        currentPhotos.splice(Number(btn.dataset.index), 1);
+      btn.addEventListener('click', async () => {
+        const idx = Number(btn.dataset.index);
+        await deletePhoto(currentPhotos[idx]); // dọn file trên máy nếu là ảnh native
+        currentPhotos.splice(idx, 1);
         renderPhotoPreview();
       });
     });
   }
+
+  // App Android thật: chặn input file mặc định, dùng Camera plugin native
+  // (mở camera thật của máy + tự lưu 1 bản vào thư viện ảnh Gallery)
+  input.addEventListener('click', async (e) => {
+    if (!isNativeApp()) return; // web thường: để input hoạt động bình thường
+
+    e.preventDefault();
+    try {
+      const photoRef = await capturePhotoNative();
+      currentPhotos.push(photoRef);
+      await renderPhotoPreview();
+    } catch (err) {
+      console.warn('Người dùng huỷ chụp ảnh hoặc lỗi camera:', err);
+    }
+  });
+
+  // Web thường (trình duyệt, chưa đóng gói app): giữ nguyên cách cũ qua <input type="file">
+  input.addEventListener('change', async (e) => {
+    if (isNativeApp()) return; // native đã xử lý ở sự kiện click phía trên
+
+    const files = Array.from(e.target.files || []);
+    for (const file of files) {
+      const photoRef = await savePhoto(file);
+      currentPhotos.push(photoRef);
+    }
+    await renderPhotoPreview();
+    input.value = '';
+  });
 }
 
 // ------------------------------------------------------------
@@ -169,7 +191,15 @@ async function renderHistory() {
     return;
   }
 
-  list.innerHTML = sessions
+  // Resolve trước URL hiển thị cho toàn bộ ảnh của mọi phiên (native hoặc base64)
+  const sessionsWithPhotoSrcs = await Promise.all(
+    sessions.map(async (s) => ({
+      ...s,
+      photoSrcs: s.photos && s.photos.length ? await Promise.all(s.photos.map(getPhotoSrc)) : [],
+    }))
+  );
+
+  list.innerHTML = sessionsWithPhotoSrcs
     .map(
       (s) => `
     <li class="record-item history-item">
@@ -194,9 +224,9 @@ async function renderHistory() {
           )
           .join('')}
         ${
-          s.photos && s.photos.length
-            ? `<div class="photo-preview">${s.photos
-                .map((p) => `<img src="${p}" class="history-photo" />`)
+          s.photoSrcs.length
+            ? `<div class="photo-preview">${s.photoSrcs
+                .map((src) => `<img src="${src}" class="history-photo" />`)
                 .join('')}</div>`
             : ''
         }
@@ -257,10 +287,17 @@ async function syncPendingSessions() {
     let successCount = 0;
     for (const session of pending) {
       try {
+        // Đọc lại nội dung ảnh (kể cả ảnh lưu native trên máy) thành base64 để gửi lên server
+        const photosBase64 = session.photos && session.photos.length
+          ? await Promise.all(session.photos.map(getPhotoBase64ForUpload))
+          : [];
+
+        const payload = { ...session, photos: photosBase64 };
+
         const res = await fetch(APPS_SCRIPT_URL, {
           method: 'POST',
           headers: { 'Content-Type': 'text/plain' }, // tránh preflight CORS
-          body: JSON.stringify(session),
+          body: JSON.stringify(payload),
         });
         const result = await res.json();
         if (result.status === 'ok') {
